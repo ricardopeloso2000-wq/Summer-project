@@ -35,8 +35,6 @@ SPI_master::SPI_master(spi_host_device_t Id) : Spi_Id(Id), RX_queue(MASTER_RX_QU
         1
     );
 
-    
-
     Clear_Buffer.SetPointer((uint8_t*)spi_bus_dma_memory_alloc(Spi_Id , BUFFSIZE , 0));
 }
 //Initiates the VSPI device
@@ -216,13 +214,17 @@ void SPI_master::TrasmitThread_routine()
                 t.tx_buffer = TX_queue.front();
             }
 
-            xSemaphoreTake(rdysem, portMAX_DELAY); //Wait for Slave to be ready
+            
             transaction_ongoing = true;
+            xSemaphoreTake(rdysem, portMAX_DELAY); //Wait for Slave to be ready
             spi_device_transmit(SPI_Handle , &t);
             transaction_ongoing = false;
 
+            if(!Slave_Sending) TX_queue.pop();
             Slave_Sending = false;
-            TX_queue.pop();
+
+            if(Spi_Id == VSPI_HOST) gpio_set_level((gpio_num_t)VSPI_HANDSHAKE_MOSI_LINE , 0);  
+            if(Spi_Id == HSPI_HOST) gpio_set_level((gpio_num_t)HSPI_HANDSHAKE_MOSI_LINE , 0);
         }
         
         
@@ -273,9 +275,6 @@ void SPI_master::HSPI_GPIO_CALLBACK(void* arg)
 void SPI_master::GPIO_routine()
 {
     if(TX_queue.empty()) Slave_Sending = true;
-
-    if(Spi_Id == VSPI_HOST) gpio_set_level((gpio_num_t)VSPI_HANDSHAKE_MOSI_LINE , 0);  
-    if(Spi_Id == HSPI_HOST) gpio_set_level((gpio_num_t)HSPI_HANDSHAKE_MOSI_LINE , 0);
 
     BaseType_t mustYield = false;
     xSemaphoreGiveFromISR(rdysem, &mustYield);

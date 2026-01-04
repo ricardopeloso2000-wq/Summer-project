@@ -47,9 +47,9 @@ class SPI_Slave
 
     static void IRAM_ATTR VSPI_GPIO_Callback(void* inst);
     static void IRAM_ATTR HSPI_GPIO_Callback(void* inst);
-
     static void IRAM_ATTR TransmitThread(void* pvParameters);
 
+    spi_host_device_t Slave_Id;
     private:
     SPI_Slave(spi_host_device_t Id);
     ~SPI_Slave();
@@ -60,9 +60,9 @@ class SPI_Slave
     void GPIO_routine();
     void TransmitThread_routine();
 
-    spi_host_device_t Slave_Id;
     const char* SPI_Tag = "SPI_slave";
 
+    TaskHandle_t Thread;
     SemaphoreHandle_t rdysem;
 
     volatile bool stop_thread = false;
@@ -71,6 +71,7 @@ class SPI_Slave
 
     DMAQueue TX_queue;
     DMAQueue RX_queue;
+    DMASmartPointer<uint8_t> Clear_Buffer;
 };
 
 #endif
