@@ -22,9 +22,6 @@ SPI_master::SPI_master(spi_host_device_t Id) : Spi_Id(Id), RX_queue(MASTER_RX_QU
     if(Id == VSPI_HOST)VSPI_INIT();
     if(Id == HSPI_HOST)HSPI_INIT();
 
-    rdysem = xSemaphoreCreateBinary();
-    xSemaphoreGive(rdysem);
-
     xTaskCreatePinnedToCore(
         SPI_master::TransmitThread,
         (Id == VSPI_HOST) ? "VSPI Thread" : "HSPI Thread",
@@ -189,8 +186,8 @@ void SPI_master::TrasmitThread_routine()
     {
         while(!TX_queue.empty() || Slave_Sending)
         {
-            if(Spi_Id == VSPI_HOST) gpio_set_level((gpio_num_t)VSPI_HANDSHAKE_MOSI_LINE , 1);  
-            if(Spi_Id == HSPI_HOST) gpio_set_level((gpio_num_t)HSPI_HANDSHAKE_MOSI_LINE , 1);
+            if(Spi_Id == VSPI_HOST && !Slave_Sending) gpio_set_level((gpio_num_t)VSPI_HANDSHAKE_MOSI_LINE , 1);  
+            if(Spi_Id == HSPI_HOST && !Slave_Sending) gpio_set_level((gpio_num_t)HSPI_HANDSHAKE_MOSI_LINE , 1);
 
             if(RX_queue.size() >= MASTER_RX_QUEUE_SIZE)
             {
@@ -216,7 +213,7 @@ void SPI_master::TrasmitThread_routine()
 
             
             transaction_ongoing = true;
-            xSemaphoreTake(rdysem, portMAX_DELAY); //Wait for Slave to be ready
+            ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // wait for slave handshake
             spi_device_transmit(SPI_Handle , &t);
             transaction_ongoing = false;
 
@@ -226,10 +223,10 @@ void SPI_master::TrasmitThread_routine()
             if(Spi_Id == VSPI_HOST) gpio_set_level((gpio_num_t)VSPI_HANDSHAKE_MOSI_LINE , 0);  
             if(Spi_Id == HSPI_HOST) gpio_set_level((gpio_num_t)HSPI_HANDSHAKE_MOSI_LINE , 0);
         }
-        
-        
         vTaskDelay(pdMS_TO_TICKS(1));
     }
+    xTaskNotifyGive(Thread);   // notify destructor we exited
+    vTaskDelete(nullptr);
 }
 
 SPI_master::~SPI_master()
@@ -238,10 +235,12 @@ SPI_master::~SPI_master()
     {
         ESP_LOGE(SPI_Tag , "Unable to Free Master SPI device");
     }
-    spi_bus_free(Spi_Id);
+    
     stop_thread = true;
-    vTaskDelay(10 / portTICK_PERIOD_MS);
+    xTaskNotifyGive(Thread);
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
     vTaskDelete(Thread);
+    spi_bus_free(Spi_Id);
 }
 
 void SPI_master::VSPI_GPIO_CALLBACK(void* arg)
@@ -276,11 +275,9 @@ void SPI_master::GPIO_routine()
 {
     if(TX_queue.empty()) Slave_Sending = true;
 
-    BaseType_t mustYield = false;
-    xSemaphoreGiveFromISR(rdysem, &mustYield);
-    if (mustYield) {
-        portYIELD_FROM_ISR();
-    }
+    BaseType_t hp = pdFALSE;
+    vTaskNotifyGiveFromISR(this->Thread, &hp);
+    if (hp) portYIELD_FROM_ISR();
 }
 
 void SPI_master::SPI_LockBus()

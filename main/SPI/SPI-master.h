@@ -71,15 +71,13 @@ class SPI_master
     TaskHandle_t Thread;
     spi_host_device_t Spi_Id;
     const char* SPI_Tag = "SPI_Master";
-
-    SemaphoreHandle_t rdysem;
     
     volatile bool stop_thread = false;
     volatile bool Slave_Sending = false;
     volatile bool transaction_ongoing = false;
 
-    DMAQueue TX_queue;
     DMAQueue RX_queue;
+    DMAQueue TX_queue;
     DMASmartPointer<uint8_t> Clear_Buffer;
     spi_device_handle_t SPI_Handle;
 };

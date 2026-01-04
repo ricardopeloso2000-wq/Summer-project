@@ -137,10 +137,12 @@ void SPI_Slave::HSPI_INIT()
 
 SPI_Slave::~SPI_Slave()
 {
-    spi_slave_free(Slave_Id);
+    
     stop_thread = true;
-    vTaskDelay(10 / portTICK_PERIOD_MS);
+    xTaskNotifyGive(Thread);
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
     vTaskDelete(Thread);
+    spi_slave_free(Slave_Id);
 }
 
 void SPI_Slave::VSPI_GPIO_Callback(void* inst)
@@ -177,6 +179,7 @@ void SPI_Slave::GPIO_routine()
 
     if(Slave_Id == VSPI_HOST) gpio_set_level((gpio_num_t)VSPI_HANDSHAKE_MISO_LINE , 1);
     if(Slave_Id == HSPI_HOST) gpio_set_level((gpio_num_t)HSPI_HANDSHAKE_MISO_LINE , 1);
+    
 }
 
 void SPI_Slave::TransmitThread(void* pvParameters)
@@ -187,7 +190,7 @@ void SPI_Slave::TransmitThread(void* pvParameters)
 
 void SPI_Slave::TransmitThread_routine()
 {
-    while(1)
+    while(!stop_thread)
     {
         while(!TX_queue.empty() || Master_Sending)
         {
@@ -225,6 +228,8 @@ void SPI_Slave::TransmitThread_routine()
         }
         vTaskDelay(pdMS_TO_TICKS(1));
     }
+    xTaskNotifyGive(Thread);   // notify destructor we exited
+    vTaskDelete(nullptr);
 }
 
 bool SPI_Slave::PutMessageOnTXQueue(const DMASmartPointer<uint8_t>& TX_ptr , size_t size)

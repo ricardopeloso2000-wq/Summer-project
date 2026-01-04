@@ -50,6 +50,7 @@ class SPI_Slave
     static void IRAM_ATTR TransmitThread(void* pvParameters);
 
     spi_host_device_t Slave_Id;
+
     private:
     SPI_Slave(spi_host_device_t Id);
     ~SPI_Slave();
@@ -69,8 +70,8 @@ class SPI_Slave
     volatile bool Master_Sending = false;
     volatile bool transaction_ongoing = false;
 
-    DMAQueue TX_queue;
     DMAQueue RX_queue;
+    DMAQueue TX_queue;
     DMASmartPointer<uint8_t> Clear_Buffer;
 };
 
