@@ -1,8 +1,9 @@
 #ifndef SPI_SLAVE_H
 #define SPI_SLAVE_H
 
-#include "../Queues/DMAQueue.h"
-#include "../SmartPointers/DMASmartPointer.h"
+#include "Global_Functions/Global_Functions.h"
+#include "Queues/DMAQueue.h"
+#include "SmartPointers/DMASmartPointer.h"
 
 #include "driver/spi_slave.h"
 #include "esp_log.h"

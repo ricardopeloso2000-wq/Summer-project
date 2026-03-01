@@ -14,11 +14,7 @@ SPI_Slave& SPI_Slave::HSPI_Instance()
 
 SPI_Slave::SPI_Slave(spi_host_device_t Id) : RX_queue(SLAVE_RX_QUEUE_SIZE , Id , BUFFSIZE) , TX_queue(SLAVE_TX_QUEUE_SIZE , Id , BUFFSIZE)
 {
-    static bool gpio_isr_installed = false;
-    if(!gpio_isr_installed) {
-        gpio_install_isr_service(0);
-        gpio_isr_installed = true;
-    }
+    Init_GPIO_Isr();
 
     Slave_Id = Id;
     if(Id == VSPI_HOST) VSPI_INIT();

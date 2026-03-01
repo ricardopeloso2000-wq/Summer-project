@@ -13,11 +13,7 @@ SPI_master& SPI_master::HSPI_Instance()
 
 SPI_master::SPI_master(spi_host_device_t Id) : Spi_Id(Id), RX_queue(MASTER_RX_QUEUE_SIZE , Id , BUFFSIZE) , TX_queue(MASTER_TX_QUEUE_SIZE , Id , BUFFSIZE)
 {
-    static bool gpio_isr_installed = false;
-    if(!gpio_isr_installed) {
-        gpio_install_isr_service(0);
-        gpio_isr_installed = true;
-    }
+    Init_GPIO_Isr();
 
     if(Id == VSPI_HOST)VSPI_INIT();
     if(Id == HSPI_HOST)HSPI_INIT();

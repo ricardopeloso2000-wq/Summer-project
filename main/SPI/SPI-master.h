@@ -12,6 +12,7 @@
 #include "freertos/semphr.h"
 #include "freertos/queue.h"
 
+#include "Global_Functions/Global_Functions.h"
 #include "Queues/DMAQueue.h"
 #include "SmartPointers/DMASmartPointer.h"
 
